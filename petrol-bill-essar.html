@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ESSAR Receipt 58mm</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+body {
+    background: #e6e6e6;
+    font-family: "Courier New", monospace;
+}
+
+.container {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+/* FORM */
+.form-box {
+    background: #fff;
+    padding: 12px;
+    width: 260px;
+    font-size: 12px;
+}
+
+.form-box h3 {
+    margin: 0 0 8px;
+    text-align: center;
+}
+
+.form-box label {
+    display: block;
+    margin-top: 6px;
+}
+
+.form-box input {
+    width: 100%;
+    padding: 4px;
+    font-family: inherit;
+    font-size: 12px;
+}
+
+.form-box button {
+    width: 100%;
+    margin-top: 10px;
+    padding: 6px;
+    cursor: pointer;
+}
+
+/* RECEIPT */
+.receipt {
+    width: 220px;   /* ~58mm */
+    padding: 40px 15px;
+    background: #ffffff;
+    margin: 20px auto;
+    font-size: 12px;
+    line-height: 1.15;
+}
+
+.center { text-align: center; }
+.bold { font-weight: bold; }
+.spacer { height: 4px; }
+
+.line {
+    white-space: pre;
+    padding-left: 15px;
+}
+
+.logo {
+    display: block;
+    margin: 0 auto 4px;
+    width: 140px; /* Adjust to fit 58mm receipt */
+    object-fit: contain;
+}
+
+@media print {
+    .form-box, .export-btn { display: none; }
+    body { background: none; }
+    .receipt { width: 58mm; }
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<!-- FORM -->
+<div class="form-box">
+<h3>ESSAR Receipt Input</h3>
+
+<label>Bill No <input id="in_billNo" placeholder="Leave blank to auto-generate"></label>
+<label>Trns ID <input id="in_trnsId"></label>
+<label>Attnd ID <input id="in_attndId"></label>
+<label>Vehicle No <input id="in_vehicleNo" value="NotEntered"></label>
+<label>Mobile No <input id="in_mobileNo" value="NotEntered"></label>
+
+<label>FP ID <input id="in_fpId" value="3"></label>
+<label>Nozzle No <input id="in_nozlNo" value="1"></label>
+<label>Fuel <input id="in_fuel" value="Petrol"></label>
+<label>Preset (Rs) <input id="in_preset" value="1010" oninput="syncPresetSale('preset')"></label>
+<label>Rate (Rs/L) <input id="in_rate" value="107.24" oninput="calculateVolume(); updateReceipt();"></label>
+<label>Sale (Rs) <input id="in_sale" value="1010"  oninput="syncPresetSale('sale')"></label>
+<label>Volume (L) <input id="in_volume" readonly></label>
+<label>Density <input id="in_density" value="0kg/m3"></label>
+
+<label>Date <input id="in_date"></label>
+<label>Time <input id="in_time"></label>
+
+<button onclick="updateReceipt()">Update Receipt</button>
+</div>
+
+<!-- RECEIPT -->
+<div>
+<div class="receipt" id="receipt">
+<!-- ESSAR THERMAL LOGO (IMAGE-ACCURATE) -->
+<div class="center" style="margin-bottom:4px;">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="318" height="159" viewBox="0 0 318 159">
+                    <image xlink:href="data:image/png;base64,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" x="20" y="0" width="150" height="150"/>
+                  </svg>
+</div>
+
+
+<div class="line">Bill No: <span id="billNo"></span></div>
+<div class="line">Trns. ID: <span id="trnsId"></span></div>
+<div class="line">Attnd. ID: <span id="attndId"></span></div>
+<div class="line">Receipt: Physical Receipt</div>
+<div class="line">Vehi. No: <span id="vehicleNo"></span></div>
+<div class="line">Mob. No: <span id="mobileNo"></span></div>
+
+<div class="spacer"></div>
+
+<div class="line">Date: <span id="date"></span></div>
+<div class="line">Time: <span id="time"></span></div>
+<div class="line">FP. ID: <span id="fpId"></span></div>
+<div class="line">Nozl No: <span id="nozlNo"></span></div>
+
+<div class="spacer"></div>
+
+<div class="line">Fuel: <span id="fuel"></span></div>
+<div class="line">Density: <span id="density"></span></div>
+<div class="line">Preset: Rs. <span id="preset"></span></div>
+<div class="line">Rate: Rs. <span id="rate"></span></div>
+<div class="line bold">Sale: Rs. <span id="sale"></span></div>
+<div class="line bold">Volume: <span id="volume"></span> L</div>
+
+<div class="spacer"></div>
+
+</div>
+
+<button class="export-btn" onclick="exportPDF()">Export PDF (58mm)</button>
+</div>
+
+</div>
+<script>
+function syncPresetSale(source) {
+    if (source === "preset") {
+        in_sale.value = in_preset.value;
+    } else if (source === "sale") {
+        in_preset.value = in_sale.value;
+    }
+    calculateVolume();
+    updateReceipt();
+}
+</script>
+
+<script>
+// AUTO BILL NO
+let billCounter = localStorage.getItem("essarBillNo");
+if (!billCounter) billCounter = 799412;
+billCounter = parseInt(billCounter);
+
+// DATE TIME
+const now = new Date();
+in_date.value = now.toLocaleDateString("en-GB");
+in_time.value = now.toLocaleTimeString("en-GB");
+
+// CALCULATE VOLUME
+function calculateVolume() {
+    const sale = parseFloat(in_sale.value);
+    const rate = parseFloat(in_rate.value);
+    if (!isNaN(sale) && !isNaN(rate) && rate !== 0) {
+        const vol = (sale / rate).toFixed(2);
+        in_volume.value = vol;
+        return vol;
+    } else {
+        in_volume.value = "";
+        return "";
+    }
+}
+
+// UPDATE RECEIPT
+function updateReceipt() {
+    // Use user-entered Bill No or generate if empty
+    let currentBill = in_billNo.value.trim();
+    if (!currentBill) {
+        billCounter++;
+        localStorage.setItem("essarBillNo", billCounter);
+        currentBill = billCounter + "-ORGNL";
+        in_billNo.value = currentBill;
+    }
+
+    const volume = calculateVolume();
+
+    const fields = [
+        "billNo","trnsId","attndId","vehicleNo","mobileNo",
+        "date","time","fpId","nozlNo",
+        "fuel","density","preset","rate","sale"
+    ];
+
+    fields.forEach(f => {
+        document.getElementById(f).textContent =
+            document.getElementById("in_" + f).value || "";
+    });
+
+    document.getElementById("volume").textContent = volume;
+
+}
+
+// PDF EXPORT
+async function exportPDF() {
+    const receipt = document.getElementById("receipt");
+    const canvas = await html2canvas(receipt, { scale: 2 });
+    const img = canvas.toDataURL("image/png");
+
+    const { jsPDF } = window.jspdf;
+    const w = 58;
+    const h = (canvas.height * w) / canvas.width;
+
+    const pdf = new jsPDF("p", "mm", [w, h + 10]);
+    pdf.addImage(img, "PNG", 0, 5, w, h);
+    pdf.save(in_billNo.value + ".pdf");  // PDF matches Bill No
+}
+
+// INIT
+updateReceipt();
+</script>
+
+</body>
+</html>
